@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/great_price?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+
+mybatis-plus:
+  configuration:
+    # 开发环境在控制台打印 SQL
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+logging:
+  level:
+    com.greatprice: debug
+
+app:
+  cors:
+    # uni-app H5 开发服务器默认端口
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

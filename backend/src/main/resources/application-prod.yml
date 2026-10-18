@@ -1,0 +1,19 @@
+# 生产环境敏感配置只从环境变量读取，不提供默认值，避免误连开发库。
+# 注意：变量缺失时应用仍能启动，但首次访问数据库会失败，可通过 /api/v1/health 的 database 字段确认。
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+logging:
+  level:
+    root: info
+    com.greatprice: info
+  file:
+    name: ${LOG_PATH:./logs}/great-price-backend.log
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+      total-size-cap: 5GB

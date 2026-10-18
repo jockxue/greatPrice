@@ -1,0 +1,25 @@
+/* 全局样式，只在 App.vue 中引入一次。主题变量定义在 src/uni.scss。 */
+
+page {
+  background-color: $gp-bg-page;
+  color: $gp-text-main;
+  font-size: $gp-font-size-base;
+  line-height: 1.5;
+}
+
+.gp-card {
+  margin: $gp-spacing-base;
+  padding: $gp-spacing-base;
+  background-color: $gp-bg-card;
+  border-radius: $gp-radius-base;
+}
+
+.gp-text-secondary {
+  color: $gp-text-secondary;
+  font-size: $gp-font-size-sm;
+}
+
+.gp-price {
+  color: $gp-color-price;
+  font-weight: 600;
+}
