@@ -13,7 +13,9 @@ public enum ErrorCode {
     UNAUTHORIZED(40100, "未登录或登录已过期", HttpStatus.UNAUTHORIZED),
     FORBIDDEN(40300, "无权访问", HttpStatus.FORBIDDEN),
     NOT_FOUND(40400, "资源不存在", HttpStatus.NOT_FOUND),
+    DEAL_UNAVAILABLE(40401, "好价已下架或已过期", HttpStatus.NOT_FOUND),
     METHOD_NOT_ALLOWED(40500, "请求方法不支持", HttpStatus.METHOD_NOT_ALLOWED),
+    CONFLICT(40900, "数据已被他人更新，请刷新后重试", HttpStatus.CONFLICT),
 
     INTERNAL_ERROR(50000, "系统繁忙，请稍后重试", HttpStatus.INTERNAL_SERVER_ERROR);
 

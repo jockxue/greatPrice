@@ -8,6 +8,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSourceResolvable;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.BindException;
@@ -28,6 +29,11 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDenied(AuthorizationDeniedException ex) {
+        return build(ErrorCode.FORBIDDEN, ErrorCode.FORBIDDEN.getMessage());
+    }
+
     @ExceptionHandler(BizException.class)
     public ResponseEntity<ApiResponse<Void>> handleBiz(BizException ex, HttpServletRequest request) {
         log.warn("业务异常 {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
@@ -38,9 +44,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BindException.class)
     public ResponseEntity<ApiResponse<Void>> handleBind(BindException ex) {
         String message = ex.getBindingResult().getAllErrors().stream()
-                .map(error -> error instanceof FieldError fieldError
-                        ? fieldError.getField() + ": " + fieldError.getDefaultMessage()
-                        : error.getDefaultMessage())
+                .map(error -> {
+                    if (!(error instanceof FieldError fieldError)) {
+                        return error.getDefaultMessage();
+                    }
+                    // 类型转换失败（如枚举值不合法）的默认提示是英文的转换细节，不直接返回给客户端
+                    return fieldError.isBindingFailure()
+                            ? "参数格式错误: " + fieldError.getField()
+                            : fieldError.getField() + ": " + fieldError.getDefaultMessage();
+                })
                 .collect(Collectors.joining("; "));
         return badRequest(message);
     }

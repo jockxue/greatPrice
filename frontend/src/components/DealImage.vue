@@ -4,7 +4,7 @@ import { pickColor } from '@/utils/palette'
 
 /** 商品图片。无图或加载失败时显示统一风格的占位区域；尺寸由父元素决定，图片按 aspectFill 裁剪不变形。 */
 const props = defineProps<{
-  image?: string
+  image?: string | null
   /** 占位区域显示的文字，通常为品牌名 */
   label: string
   /** 决定占位颜色，通常为分类 id */
@@ -21,7 +21,7 @@ const showImage = computed(() => !!props.image && !loadFailed.value)
     <image v-if="showImage" class="deal-image__img" :src="image" mode="aspectFill" lazy-load @error="loadFailed = true" />
     <view v-else class="deal-image__placeholder">
       <text class="deal-image__label" :style="{ color: color.fg }">{{ label }}</text>
-      <text class="deal-image__hint">演示图</text>
+      <text class="deal-image__hint">暂无图片</text>
     </view>
   </view>
 </template>

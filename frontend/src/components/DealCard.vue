@@ -2,12 +2,12 @@
 import { computed } from 'vue'
 import DealImage from '@/components/DealImage.vue'
 import PriceText from '@/components/PriceText.vue'
-import type { Deal } from '@/types/deal'
+import type { DealSummary } from '@/types/deal'
 import { formatDateTime } from '@/utils/format'
 import { goDealDetail } from '@/utils/navigation'
 
 const props = defineProps<{
-  deal: Deal
+  deal: DealSummary
   /** 窄列表（如分类页右侧）使用更小的图片 */
   compact?: boolean
 }>()
@@ -22,13 +22,13 @@ const timeText = computed(() =>
 <template>
   <view class="deal-card" :class="{ 'deal-card--compact': compact }" hover-class="deal-card--hover" @click="goDealDetail(deal.id)">
     <view class="deal-card__image">
-      <DealImage :image="deal.image" :label="deal.brand" :color-seed="deal.categoryId" />
+      <DealImage :image="deal.imageUrl" :label="deal.brand || deal.title" :color-seed="deal.categoryId" />
     </view>
     <view class="deal-card__body">
       <view class="deal-card__title">{{ deal.title }}</view>
       <view class="deal-card__desc">{{ deal.dealDescription }}</view>
       <view class="deal-card__price">
-        <PriceText :price="deal.price" :original-price="deal.originalPrice" :currency="deal.currency" />
+        <PriceText :price="deal.currentPrice" :original-price="deal.originalPrice" :currency="deal.currency" />
       </view>
       <view class="deal-card__meta">
         <text class="deal-card__source">{{ deal.sourceName }}</text>

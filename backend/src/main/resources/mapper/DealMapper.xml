@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.greatprice.mapper.DealMapper">
+
+    <sql id="summaryColumns">
+        d.id, d.product_id, p.title, p.brand, p.image_url, p.category_id, c.name AS category_name,
+        d.current_price, d.original_price, d.currency, d.deal_description, d.source_type, d.source_name,
+        d.starts_at, d.expires_at, d.verified_at, d.published_at
+    </sql>
+
+    <sql id="fromJoin">
+        FROM deal d
+        JOIN product p ON p.id = d.product_id
+        LEFT JOIN category c ON c.id = p.category_id
+    </sql>
+
+    <sql id="publicCondition">
+        d.status = 'PUBLISHED'
+        AND d.published_at IS NOT NULL AND d.published_at &lt;= #{now}
+        AND (d.starts_at IS NULL OR d.starts_at &lt;= #{now})
+        AND (d.expires_at IS NULL OR d.expires_at &gt; #{now})
+        AND p.status = 'ACTIVE'
+        AND p.deleted = 0
+    </sql>
+
+    <select id="selectPublicPage" resultType="com.greatprice.entity.DealRow">
+        SELECT <include refid="summaryColumns"/>
+        <include refid="fromJoin"/>
+        WHERE <include refid="publicCondition"/>
+        <if test="categoryId != null">
+            AND p.category_id = #{categoryId}
+        </if>
+        <if test="featured != null">
+            AND d.featured = #{featured}
+        </if>
+        <if test="keyword != null">
+            AND (p.title LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+                 OR p.brand LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+                 OR c.name LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!')
+        </if>
+        ORDER BY
+        <choose>
+            <when test="sortBy == 'PRICE_ASC'">d.current_price ASC, d.id DESC</when>
+            <when test="sortBy == 'PRICE_DESC'">d.current_price DESC, d.id DESC</when>
+            <otherwise>d.published_at DESC, d.id DESC</otherwise>
+        </choose>
+    </select>
+
+    <select id="selectPublicById" resultType="com.greatprice.entity.DealRow">
+        SELECT <include refid="summaryColumns"/>,
+               p.specification, p.description, d.purchase_url, d.promotion_url
+        <include refid="fromJoin"/>
+        WHERE d.id = #{id} AND <include refid="publicCondition"/>
+    </select>
+
+    <sql id="adminColumns">
+        d.id, d.product_id, p.product_code, p.status AS product_status, p.deleted AS product_deleted,
+        p.title, p.brand, p.image_url, p.category_id, c.name AS category_name,
+        p.specification, p.description,
+        d.current_price, d.original_price, d.currency, d.deal_description, d.source_type, d.source_name,
+        d.purchase_url, d.promotion_url, d.featured, d.starts_at, d.expires_at, d.verified_at,
+        d.status, d.published_at, d.created_at, d.updated_at,
+        d.reject_reason, d.offline_reason, d.submitted_by, su.display_name AS submitter_name,
+        d.reviewed_by, ru.display_name AS reviewer_name, d.reviewed_at, d.version
+    </sql>
+
+    <sql id="adminFrom">
+        FROM deal d
+        JOIN product p ON p.id = d.product_id
+        LEFT JOIN category c ON c.id = p.category_id
+        LEFT JOIN admin_user su ON su.id = d.submitted_by
+        LEFT JOIN admin_user ru ON ru.id = d.reviewed_by
+    </sql>
+
+    <select id="selectAdminPage" resultType="com.greatprice.entity.AdminDealRow">
+        SELECT <include refid="adminColumns"/>
+        <include refid="adminFrom"/>
+        <where>
+            <if test="categoryId != null">AND p.category_id = #{categoryId}</if>
+            <if test="productId != null">AND d.product_id = #{productId}</if>
+            <if test="status != null">AND d.status = #{status}</if>
+            <if test="sourceType != null">AND d.source_type = #{sourceType}</if>
+            <if test="keyword != null">
+                AND (p.title LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+                     OR p.product_code LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+                     OR p.brand LIKE CONCAT('%', #{keyword}, '%') ESCAPE '!'
+                     <if test="dealId != null">OR d.id = #{dealId}</if>)
+            </if>
+        </where>
+        ORDER BY
+        <choose>
+            <when test="sortBy == 'CREATED_AT_ASC'">d.created_at ASC, d.id ASC</when>
+            <when test="sortBy == 'PUBLISHED_AT_DESC'">d.published_at DESC, d.id DESC</when>
+            <when test="sortBy == 'PUBLISHED_AT_ASC'">d.published_at ASC, d.id ASC</when>
+            <otherwise>d.created_at DESC, d.id DESC</otherwise>
+        </choose>
+    </select>
+
+    <select id="selectAdminById" resultType="com.greatprice.entity.AdminDealRow">
+        SELECT <include refid="adminColumns"/>
+        <include refid="adminFrom"/>
+        WHERE d.id = #{id}
+    </select>
+
+    <update id="updateEditable">
+        UPDATE deal
+        SET product_id = #{productId},
+            current_price = #{currentPrice},
+            original_price = #{originalPrice},
+            currency = #{currency},
+            deal_description = #{dealDescription},
+            source_type = #{sourceType},
+            source_name = #{sourceName},
+            purchase_url = #{purchaseUrl},
+            promotion_url = #{promotionUrl},
+            starts_at = #{startsAt},
+            expires_at = #{expiresAt},
+            version = version + 1
+        WHERE id = #{id}
+          AND version = #{version}
+          AND status IN ('DRAFT', 'PENDING_REVIEW')
+    </update>
+
+    <update id="revisePublished">
+        UPDATE deal
+        SET product_id = #{productId},
+            current_price = #{currentPrice},
+            original_price = #{originalPrice},
+            currency = #{currency},
+            deal_description = #{dealDescription},
+            source_type = #{sourceType},
+            source_name = #{sourceName},
+            purchase_url = #{purchaseUrl},
+            promotion_url = #{promotionUrl},
+            starts_at = #{startsAt},
+            expires_at = #{expiresAt},
+            verified_at = NULL,
+            status = 'PENDING_REVIEW',
+            submitted_by = #{submittedBy},
+            reject_reason = NULL,
+            version = version + 1
+        WHERE id = #{id}
+          AND version = #{version}
+          AND status = 'PUBLISHED'
+    </update>
+
+    <update id="submitReview">
+        UPDATE deal
+        SET status = 'PENDING_REVIEW',
+            submitted_by = #{actorId},
+            reject_reason = NULL,
+            version = version + 1
+        WHERE id = #{id} AND version = #{version} AND status = 'DRAFT'
+    </update>
+
+    <update id="approve">
+        UPDATE deal
+        SET status = 'PUBLISHED',
+            published_at = #{now},
+            reviewed_by = #{actorId},
+            reviewed_at = #{now},
+            reject_reason = NULL,
+            version = version + 1
+        WHERE id = #{id} AND version = #{version} AND status = 'PENDING_REVIEW'
+    </update>
+
+    <update id="reject">
+        UPDATE deal
+        SET status = 'DRAFT',
+            reject_reason = #{reason},
+            reviewed_by = #{actorId},
+            reviewed_at = #{now},
+            version = version + 1
+        WHERE id = #{id} AND version = #{version} AND status = 'PENDING_REVIEW'
+    </update>
+
+    <update id="offline">
+        UPDATE deal
+        SET status = 'OFFLINE',
+            offline_reason = #{reason},
+            version = version + 1
+        WHERE id = #{id} AND version = #{version} AND status = 'PUBLISHED'
+    </update>
+
+    <update id="reopen">
+        UPDATE deal
+        SET status = 'DRAFT',
+            published_at = NULL,
+            reject_reason = NULL,
+            offline_reason = NULL,
+            version = version + 1
+        WHERE id = #{id} AND version = #{version} AND status IN ('OFFLINE', 'EXPIRED')
+    </update>
+
+    <update id="markVerified">
+        UPDATE deal
+        SET verified_at = #{now},
+            version = version + 1
+        WHERE id = #{id} AND source_type &lt;&gt; 'DEMO'
+    </update>
+</mapper>

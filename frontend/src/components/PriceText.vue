@@ -5,17 +5,18 @@ import { formatAmount, formatPrice, getCurrencySymbol } from '@/utils/format'
 
 const props = withDefaults(
   defineProps<{
-    price: number
+    /** 后端金额字符串，如 "89.90" */
+    price: string
     currency: CurrencyCode
-    originalPrice?: number
+    originalPrice?: string | null
     size?: 'md' | 'lg'
   }>(),
   { size: 'md' },
 )
 
-/** 原价高于现价时才显示划线价 */
+/** 参考价高于现价时才显示划线价；Number 只用于比较大小，展示仍使用原字符串 */
 const originalText = computed(() =>
-  props.originalPrice !== undefined && props.originalPrice > props.price
+  props.originalPrice && Number(props.originalPrice) > Number(props.price)
     ? formatPrice(props.originalPrice, props.currency)
     : '',
 )

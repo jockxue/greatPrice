@@ -7,6 +7,29 @@ export function showToast(title: string) {
   uni.showToast({ title, icon: 'none' })
 }
 
+/**
+ * 打开站外购买链接，调用方需先确认是合法的 https 地址。
+ * H5 新开窗口；小程序不能直接打开外部网页（web-view 只能打开已配置且归属本主体的业务域名），改为复制链接。
+ */
+export function openExternalUrl(url: string) {
+  // #ifdef H5
+  window.open(url, '_blank', 'noopener')
+  // #endif
+  // #ifndef H5
+  uni.setClipboardData({
+    data: url,
+    success: () => {
+      uni.showModal({
+        title: '链接已复制',
+        content: '请粘贴到浏览器或对应购物 App 中打开，价格以下单页面为准',
+        showCancel: false,
+        confirmText: '知道了',
+      })
+    },
+  })
+  // #endif
+}
+
 export interface NavBarMetrics {
   /** 系统状态栏高度（px），自定义导航栏需要为其留白 */
   statusBarHeight: number

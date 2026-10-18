@@ -3,21 +3,23 @@ import { formatAmount, formatDateTime, formatPrice } from '@/utils/format'
 
 describe('formatAmount', () => {
   it('整数不显示小数', () => {
-    expect(formatAmount(199)).toBe('199')
-    expect(formatAmount(0)).toBe('0')
+    expect(formatAmount('199.00')).toBe('199')
+    expect(formatAmount('0.00')).toBe('0')
+    expect(formatAmount('1000.00')).toBe('1000')
   })
 
-  it('小数保留两位', () => {
-    expect(formatAmount(89.9)).toBe('89.90')
-    expect(formatAmount(35.5)).toBe('35.50')
-    expect(formatAmount(0.1 + 0.2)).toBe('0.30')
+  it('小数原样保留两位', () => {
+    expect(formatAmount('89.90')).toBe('89.90')
+    expect(formatAmount('35.50')).toBe('35.50')
+    expect(formatAmount('0.30')).toBe('0.30')
+    expect(formatAmount('100.05')).toBe('100.05')
   })
 })
 
 describe('formatPrice', () => {
   it('带人民币符号', () => {
-    expect(formatPrice(299, 'CNY')).toBe('¥299')
-    expect(formatPrice(49.9, 'CNY')).toBe('¥49.90')
+    expect(formatPrice('299.00', 'CNY')).toBe('¥299')
+    expect(formatPrice('49.90', 'CNY')).toBe('¥49.90')
   })
 })
 

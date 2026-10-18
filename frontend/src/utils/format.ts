@@ -4,17 +4,18 @@ const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   CNY: '¥',
 }
 
-/** 金额数字转展示文本，不带货币符号：整数不显示小数，否则保留两位。199 → "199"，89.9 → "89.90" */
-export function formatAmount(amount: number): string {
-  return Number.isInteger(amount) ? String(amount) : amount.toFixed(2)
+/** 后端金额字符串转展示文本，不带货币符号，不经过浮点运算：整数去掉 ".00"，否则原样保留两位。"199.00" → "199"，"89.90" → "89.90" */
+export function formatAmount(amount: string): string {
+  return amount.endsWith('.00') ? amount.slice(0, -3) : amount
 }
 
+/** 未知币种直接显示币种代码 */
 export function getCurrencySymbol(currency: CurrencyCode): string {
-  return CURRENCY_SYMBOLS[currency]
+  return CURRENCY_SYMBOLS[currency] ?? currency
 }
 
-/** 99.9, 'CNY' → "¥99.90" */
-export function formatPrice(amount: number, currency: CurrencyCode): string {
+/** "99.90", 'CNY' → "¥99.90" */
+export function formatPrice(amount: string, currency: CurrencyCode): string {
   return getCurrencySymbol(currency) + formatAmount(amount)
 }
 

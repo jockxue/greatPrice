@@ -16,4 +16,4 @@ logging:
 app:
   cors:
     # uni-app H5 开发服务器默认端口
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174}

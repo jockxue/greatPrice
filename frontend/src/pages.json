@@ -14,7 +14,8 @@
 				"navigationBarTitleText": "好价导购",
 				// 首页使用自定义导航栏（品牌 + 搜索），尺寸由 platform/getNavBarMetrics 计算
 				"navigationStyle": "custom",
-				"navigationBarTextStyle": "white"
+				"navigationBarTextStyle": "white",
+				"enablePullDownRefresh": true
 			}
 		},
 		{

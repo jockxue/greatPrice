@@ -1,38 +1,79 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { computed, ref } from 'vue'
+import { onLoad, onPullDownRefresh, onReachBottom } from '@dcloudio/uni-app'
+import { fetchCategories } from '@/api/category'
+import { fetchDeals } from '@/api/deal'
 import CategoryIcon from '@/components/CategoryIcon.vue'
 import DealCard from '@/components/DealCard.vue'
 import DealImage from '@/components/DealImage.vue'
 import DemoNotice from '@/components/DemoNotice.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import ListFooter from '@/components/ListFooter.vue'
 import PriceText from '@/components/PriceText.vue'
-import { getNavBarMetrics } from '@/platform'
-import { listCategories, listDeals, listFeaturedDeals } from '@/services/deal'
+import { usePagedList } from '@/composables/usePagedList'
+import { getNavBarMetrics, showToast } from '@/platform'
+import { isDemoDeal } from '@/services/deal'
 import { useCategoryStore } from '@/stores/category'
-import type { Category, Deal } from '@/types/deal'
+import type { Category, DealSummary } from '@/types/deal'
 import { goCategory, goDealDetail, goSearch } from '@/utils/navigation'
 
 /** 「更多」使用色板中的灰色 */
 const MORE_COLOR_SEED = 7
+const FEATURED_SIZE = 10
 
 const nav = getNavBarMetrics()
 const categoryStore = useCategoryStore()
 
-const loading = ref(true)
 const categories = ref<Category[]>([])
-const featuredDeals = ref<Deal[]>([])
-const deals = ref<Deal[]>([])
+const featuredDeals = ref<DealSummary[]>([])
+const {
+  items: deals,
+  loading,
+  error,
+  finished,
+  reload,
+  loadMore,
+  retry,
+} = usePagedList((page, size) => fetchDeals({ page, size }))
 
-onLoad(async () => {
-  const [categoryList, featuredList, dealList] = await Promise.all([
-    listCategories(),
-    listFeaturedDeals(),
-    listDeals(),
-  ])
-  categories.value = categoryList
-  featuredDeals.value = featuredList
-  deals.value = dealList
-  loading.value = false
+const hasDemo = computed(() => featuredDeals.value.some(isDemoDeal) || deals.value.some(isDemoDeal))
+const featuredHasDemo = computed(() => featuredDeals.value.some(isDemoDeal))
+
+/** 分类和精选是辅助区块，失败时隐藏，下拉刷新会重新请求；主列表失败时展示错误状态 */
+async function loadCategories() {
+  try {
+    categories.value = await fetchCategories()
+  } catch (e) {
+    console.warn('分类加载失败', e)
+  }
+}
+
+async function loadFeatured() {
+  try {
+    featuredDeals.value = (await fetchDeals({ featured: true, size: FEATURED_SIZE })).records
+  } catch (e) {
+    console.warn('精选加载失败', e)
+  }
+}
+
+function loadAll(keepItems = false) {
+  return Promise.all([loadCategories(), loadFeatured(), reload({ keepItems })])
+}
+
+onLoad(() => {
+  loadAll()
+})
+
+onPullDownRefresh(async () => {
+  await loadAll(true)
+  uni.stopPullDownRefresh()
+  if (error.value && deals.value.length) {
+    showToast(error.value)
+  }
+})
+
+onReachBottom(() => {
+  loadMore()
 })
 
 /** id 为 null 表示查看全部分类 */
@@ -55,11 +96,11 @@ function openCategory(id: number | null) {
       </view>
     </view>
 
-    <view class="section">
+    <view v-if="hasDemo" class="section">
       <DemoNotice />
     </view>
 
-    <view class="section card categories">
+    <view v-if="categories.length" class="section card categories">
       <view
         v-for="category in categories"
         :key="category.id"
@@ -70,7 +111,7 @@ function openCategory(id: number | null) {
         <CategoryIcon :name="category.name" :color-seed="category.id" />
         <text class="categories__name">{{ category.name }}</text>
       </view>
-      <view v-if="categories.length" class="categories__item" hover-class="categories__item--hover" @click="openCategory(null)">
+      <view class="categories__item" hover-class="categories__item--hover" @click="openCategory(null)">
         <CategoryIcon name="更多" :color-seed="MORE_COLOR_SEED" />
         <text class="categories__name">更多</text>
       </view>
@@ -79,7 +120,7 @@ function openCategory(id: number | null) {
     <view v-if="featuredDeals.length" class="section">
       <view class="section__header">
         <text class="section__title">编辑精选</text>
-        <text class="section__subtitle">演示数据</text>
+        <text v-if="featuredHasDemo" class="section__subtitle">演示数据</text>
       </view>
       <scroll-view class="featured" scroll-x :show-scrollbar="false">
         <view
@@ -90,10 +131,10 @@ function openCategory(id: number | null) {
           @click="goDealDetail(deal.id)"
         >
           <view class="featured__image">
-            <DealImage :image="deal.image" :label="deal.brand" :color-seed="deal.categoryId" />
+            <DealImage :image="deal.imageUrl" :label="deal.brand || deal.title" :color-seed="deal.categoryId" />
           </view>
           <view class="featured__title">{{ deal.title }}</view>
-          <PriceText :price="deal.price" :currency="deal.currency" />
+          <PriceText :price="deal.currentPrice" :currency="deal.currency" />
         </view>
       </scroll-view>
     </view>
@@ -102,11 +143,19 @@ function openCategory(id: number | null) {
       <view class="section__header">
         <text class="section__title">最新好价</text>
       </view>
-      <uni-load-more v-if="loading" status="loading" />
       <view v-for="deal in deals" :key="deal.id" class="feed__item">
         <DealCard :deal="deal" />
       </view>
-      <view v-if="!loading" class="feed__end">没有更多了</view>
+      <EmptyState
+        v-if="!loading && error && !deals.length"
+        icon="info"
+        title="加载失败"
+        :description="error"
+        action-text="重新加载"
+        @action="loadAll()"
+      />
+      <EmptyState v-else-if="!loading && finished && !deals.length" icon="shop" title="暂无好价" description="稍后再来看看吧" />
+      <ListFooter :loading="loading" :error="error" :finished="finished" :has-items="deals.length > 0" @retry="retry" @more="loadMore" />
     </view>
   </view>
 </template>
@@ -256,12 +305,5 @@ function openCategory(id: number | null) {
 
 .feed__item {
   margin-bottom: $gp-spacing-sm;
-}
-
-.feed__end {
-  padding: $gp-spacing-base 0 $gp-spacing-lg;
-  color: $gp-text-placeholder;
-  font-size: $gp-font-size-sm;
-  text-align: center;
 }
 </style>

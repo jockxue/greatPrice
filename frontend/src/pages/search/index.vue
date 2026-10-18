@@ -1,18 +1,37 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onReachBottom } from '@dcloudio/uni-app'
+import { fetchDeals } from '@/api/deal'
 import DealCard from '@/components/DealCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import ListFooter from '@/components/ListFooter.vue'
+import { usePagedList } from '@/composables/usePagedList'
 import { showToast } from '@/platform'
-import { listHotKeywords, searchDeals } from '@/services/deal'
-import type { Deal } from '@/types/deal'
+import { listHotKeywords } from '@/services/deal'
+
+/** 与后端 DealQueryRequest.MAX_KEYWORD_LENGTH 一致 */
+const MAX_KEYWORD_LENGTH = 50
 
 const keyword = ref('')
 /** 已执行搜索的关键词；为空表示尚未搜索，显示热门搜索 */
 const searchedKeyword = ref('')
-const results = ref<Deal[]>([])
 const hotKeywords = ref<string[]>([])
 const autoFocus = ref(false)
+
+const {
+  items: results,
+  total,
+  loading,
+  error,
+  finished,
+  reload,
+  loadMore,
+  retry,
+} = usePagedList((page, size) => fetchDeals({ page, size, keyword: searchedKeyword.value }))
+
+onReachBottom(() => {
+  if (searchedKeyword.value) loadMore()
+})
 
 onLoad((query) => {
   listHotKeywords().then((list) => {
@@ -27,14 +46,16 @@ onLoad((query) => {
   }
 })
 
-async function doSearch() {
-  const value = keyword.value.trim()
+/** 只在确认搜索时请求，不随输入实时请求；同一关键词正在加载时忽略重复提交 */
+function doSearch() {
+  const value = keyword.value.trim().slice(0, MAX_KEYWORD_LENGTH)
   if (!value) {
     showToast('请输入搜索关键词')
     return
   }
-  results.value = await searchDeals(value)
+  if (value === searchedKeyword.value && loading.value) return
   searchedKeyword.value = value
+  reload()
 }
 
 function searchHotKeyword(value: string) {
@@ -45,7 +66,6 @@ function searchHotKeyword(value: string) {
 function clearKeyword() {
   keyword.value = ''
   searchedKeyword.value = ''
-  results.value = []
 }
 </script>
 
@@ -60,6 +80,7 @@ function clearKeyword() {
           placeholder="搜索商品名称、品牌或分类"
           placeholder-class="search-bar__placeholder"
           confirm-type="search"
+          :maxlength="MAX_KEYWORD_LENGTH"
           :focus="autoFocus"
           @confirm="doSearch"
         />
@@ -89,20 +110,27 @@ function clearKeyword() {
     </view>
 
     <view v-else class="results">
-      <template v-if="results.length">
-        <view class="results__summary">找到 {{ results.length }} 条与“{{ searchedKeyword }}”相关的好价</view>
-        <view v-for="deal in results" :key="deal.id" class="results__item">
-          <DealCard :deal="deal" />
-        </view>
-      </template>
+      <view v-if="results.length" class="results__summary">找到 {{ total }} 条与“{{ searchedKeyword }}”相关的好价</view>
+      <view v-for="deal in results" :key="deal.id" class="results__item">
+        <DealCard :deal="deal" />
+      </view>
       <EmptyState
-        v-else
+        v-if="!loading && error && !results.length"
+        icon="info"
+        title="搜索失败"
+        :description="error"
+        action-text="重试"
+        @action="retry"
+      />
+      <EmptyState
+        v-else-if="!loading && finished && !results.length"
         icon="search"
         title="没有找到相关好价"
         :description="`没有与“${searchedKeyword}”匹配的商品，换个关键词试试`"
         action-text="清空重新搜索"
         @action="clearKeyword"
       />
+      <ListFooter :loading="loading" :error="error" :finished="finished" :has-items="results.length > 0" @retry="retry" @more="loadMore" />
     </view>
   </view>
 </template>

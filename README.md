@@ -2,13 +2,14 @@
 
 类似“什么值得买”的商品好价发现与导购平台（非自营电商）。首期为微信小程序，同一套前端代码可构建 H5，后续可扩展 App；管理后台后续作为独立 Vue 3 项目复用同一套后端 API。
 
-当前处于 **第二阶段：核心页面 UI 与静态交互**。首页、分类、搜索、详情已完成，数据来自前端演示数据（`frontend/src/mock/`），尚未接入后端业务接口。
+当前处于 **第四阶段：管理后台**。用户端首页、分类、搜索、详情继续读取 MySQL；运营后台在 `admin/`，通过 `/api/admin/v1/**` 管理商品、好价审核、发布和下架、价格核验。开发库中的商品仍是标注了 `DEMO` 的演示数据。用户端登录、收藏和推广联盟尚未开发。
 
 ## 目录
 
 ```
 greatPrice/
 ├── frontend/   uni-app + Vue 3 + TypeScript（微信小程序 / H5）
+├── admin/      Vue 3 + TypeScript + Vite + Element Plus（运营后台）
 ├── backend/    Spring Boot + MyBatis-Plus + MySQL
 └── docs/       架构、开发指南、API 约定
 ```
@@ -31,12 +32,19 @@ greatPrice/
 ```bash
 cd backend
 cp .env.example .env          # 填写本地 MySQL 账号密码
+# 首次：建库、建表、写入演示数据（三个脚本均可重复执行）
+mysql -uroot -p < sql/init.sql
+mysql -uroot -p great_price < sql/schema.sql
+mysql -uroot -p great_price < sql/V4__admin.sql
+mysql -uroot -p great_price < sql/demo-data.sql
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 mvn spring-boot:run
+# IDEA 直接运行 GreatPriceApplication 时，工作目录为仓库根目录或 backend/ 都可以读到 backend/.env
 curl http://localhost:8080/api/v1/health
+curl "http://localhost:8080/api/v1/deals?page=1&size=2"
 ```
 
-前端：
+用户端：
 
 ```bash
 cd frontend
@@ -45,14 +53,25 @@ npm run dev:h5                # 浏览器访问 http://localhost:5173
 npm run dev:mp-weixin         # 然后用微信开发者工具导入 frontend/dist/dev/mp-weixin
 ```
 
+管理后台（先启动后端；第一个管理员用环境变量创建，见开发指南）：
+
+```bash
+cd admin
+npm ci
+npm run dev                   # 浏览器访问 http://localhost:5174
+```
+
 ## 常用命令
 
 | 目的 | 命令（在对应目录下执行） |
 | --- | --- |
 | 前端类型检查 | `npm run type-check` |
-| 前端单元测试 | `npm test` |
+| 用户端单元测试 | 在 `frontend/` 执行 `npm test` |
+| 管理后台单元测试 | 在 `admin/` 执行 `npm test` |
+| 管理后台类型检查 | 在 `admin/` 执行 `npm run type-check` |
 | 构建微信小程序 | `npm run build:mp-weixin` → `frontend/dist/build/mp-weixin` |
 | 构建 H5 | `npm run build:h5` → `frontend/dist/build/h5` |
+| 构建管理后台 | 在 `admin/` 执行 `npm run build` |
 | 后端测试 | `mvn test` |
 | 后端打包 | `mvn package` → `backend/target/great-price-backend-0.0.1-SNAPSHOT.jar` |
 

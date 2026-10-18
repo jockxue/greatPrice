@@ -1,38 +1,55 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { fetchCategories } from '@/api/category'
+import { fetchDeals } from '@/api/deal'
 import DealCard from '@/components/DealCard.vue'
 import EmptyState from '@/components/EmptyState.vue'
-import { listCategories, listDeals } from '@/services/deal'
+import ListFooter from '@/components/ListFooter.vue'
+import { usePagedList } from '@/composables/usePagedList'
 import { useCategoryStore } from '@/stores/category'
-import type { Category, Deal } from '@/types/deal'
+import type { Category } from '@/types/deal'
 import { goHome } from '@/utils/navigation'
 
 const categoryStore = useCategoryStore()
 const { selectedId } = storeToRefs(categoryStore)
 
 const categories = ref<Category[]>([])
-const deals = ref<Deal[]>([])
-const loading = ref(true)
+const categoriesLoading = ref(false)
+const categoriesFailed = ref(false)
+
+const {
+  items: deals,
+  total,
+  loading,
+  error,
+  finished,
+  reload,
+  loadMore,
+  retry,
+} = usePagedList((page, size) => fetchDeals({ page, size, categoryId: selectedId.value ?? undefined }))
 
 const currentName = computed(
   () => categories.value.find((c) => c.id === selectedId.value)?.name ?? '全部好价',
 )
 
-listCategories().then((list) => {
-  categories.value = list
-})
+async function loadCategories() {
+  categoriesLoading.value = true
+  categoriesFailed.value = false
+  try {
+    categories.value = await fetchCategories()
+  } catch (e) {
+    console.warn('分类加载失败', e)
+    categoriesFailed.value = true
+  } finally {
+    categoriesLoading.value = false
+  }
+}
 
-/** 首页通过 store 切换分类后切到本页，watch 会自动刷新列表 */
-watch(
-  selectedId,
-  async (id) => {
-    loading.value = true
-    deals.value = await listDeals(id ?? undefined)
-    loading.value = false
-  },
-  { immediate: true },
-)
+loadCategories()
+
+/** 首页通过 store 切换分类后切到本页，watch 会自动刷新列表；快速切换时旧请求的结果由 usePagedList 丢弃 */
+watch(selectedId, () => reload(), { immediate: true })
 </script>
 
 <template>
@@ -54,28 +71,39 @@ watch(
       >
         {{ category.name }}
       </view>
+      <view v-if="categoriesLoading" class="sidebar__hint">加载中…</view>
+      <view v-else-if="categoriesFailed" class="sidebar__hint sidebar__hint--error" @click="loadCategories">
+        分类加载失败
+        <text class="sidebar__retry">点击重试</text>
+      </view>
     </scroll-view>
 
     <!-- key 随分类变化，切换分类时列表回到顶部 -->
-    <scroll-view :key="selectedId ?? 'all'" class="content" scroll-y>
+    <scroll-view :key="selectedId ?? 'all'" class="content" scroll-y @scrolltolower="loadMore">
       <view class="content__header">
         <text class="content__title">{{ currentName }}</text>
-        <text v-if="!loading" class="content__count">共 {{ deals.length }} 条</text>
+        <text v-if="!loading && !error" class="content__count">共 {{ total }} 条</text>
       </view>
-      <uni-load-more v-if="loading" status="loading" />
-      <template v-else>
-        <view v-for="deal in deals" :key="deal.id" class="content__item">
-          <DealCard :deal="deal" compact />
-        </view>
-        <EmptyState
-          v-if="deals.length === 0"
-          icon="shop"
-          title="该分类暂无好价"
-          description="换个分类看看，或回首页逛逛"
-          action-text="回首页逛逛"
-          @action="goHome"
-        />
-      </template>
+      <view v-for="deal in deals" :key="deal.id" class="content__item">
+        <DealCard :deal="deal" compact />
+      </view>
+      <EmptyState
+        v-if="!loading && error && !deals.length"
+        icon="info"
+        title="加载失败"
+        :description="error"
+        action-text="重新加载"
+        @action="retry"
+      />
+      <EmptyState
+        v-else-if="!loading && finished && !deals.length"
+        icon="shop"
+        title="该分类暂无好价"
+        description="换个分类看看，或回首页逛逛"
+        action-text="回首页逛逛"
+        @action="goHome"
+      />
+      <ListFooter :loading="loading" :error="error" :finished="finished" :has-items="deals.length > 0" @retry="retry" @more="loadMore" />
     </scroll-view>
   </view>
 </template>
@@ -118,6 +146,24 @@ watch(
     border-radius: 0 6rpx 6rpx 0;
     content: '';
   }
+}
+
+.sidebar__hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28rpx 0;
+  color: $gp-text-placeholder;
+  font-size: $gp-font-size-sm;
+}
+
+.sidebar__hint--error {
+  color: $gp-text-secondary;
+}
+
+.sidebar__retry {
+  margin-top: 8rpx;
+  color: $gp-color-primary;
 }
 
 .content {

@@ -17,3 +17,10 @@ export interface PageQuery {
   page?: number
   size?: number
 }
+
+/** 与后端 ErrorCode 对应的错误码；-1 为前端网络或解析错误 */
+export const API_ERROR_CODE = {
+  NETWORK: -1,
+  NOT_FOUND: 40400,
+  DEAL_UNAVAILABLE: 40401,
+} as const
