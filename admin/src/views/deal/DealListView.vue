@@ -32,6 +32,12 @@
       <el-table-column label="状态" width="110">
         <template #default="{ row }"><StatusTag :status="row.status" /></template>
       </el-table-column>
+      <el-table-column label="结束时间" min-width="170">
+        <template #default="{ row }">{{ row.expiresAt || '未设置' }}</template>
+      </el-table-column>
+      <el-table-column label="到期" width="90">
+        <template #default="{ row }">{{ row.expired ? '是' : '否' }}</template>
+      </el-table-column>
       <el-table-column label="来源" width="110">
         <template #default="{ row }">{{ labelOf(sourceLabel, row.sourceType) }}</template>
       </el-table-column>

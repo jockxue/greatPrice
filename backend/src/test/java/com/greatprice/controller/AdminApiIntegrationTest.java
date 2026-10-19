@@ -37,8 +37,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -88,6 +91,28 @@ class AdminApiIntegrationTest {
         adminSession = login("admin", ADMIN_PASSWORD);
         admin2Session = login("admin2", ADMIN_PASSWORD);
         operatorSession = login("operator", OPERATOR_PASSWORD);
+    }
+
+    @Test
+    void adminDevOriginCanRequestCsrf() throws Exception {
+        mockMvc.perform(options("/api/admin/v1/auth/csrf")
+                        .header("Origin", "http://localhost:5174")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "content-type,x-xsrf-token"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5174"))
+                .andExpect(header().string("Access-Control-Allow-Credentials", "true"));
+
+        mockMvc.perform(get("/api/admin/v1/auth/csrf").header("Origin", "http://127.0.0.1:5174"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://127.0.0.1:5174"));
+    }
+
+    @Test
+    void unknownOriginIsRejected() throws Exception {
+        mockMvc.perform(get("/api/admin/v1/auth/csrf").header("Origin", "http://evil.example"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().string("Invalid CORS request"));
     }
 
     @Test
@@ -190,14 +215,15 @@ class AdminApiIntegrationTest {
     void reviewApproveRejectOfflineAndPublicVisibility() throws Exception {
         long productId = createProduct(operatorSession, code("FLOW"));
         long dealId = createDeal(operatorSession, productId, "19.90", "EDITOR", "https://item.example.com/flow");
-        assertEquals(0, historyCount());
+        int historyBefore = historyCount();
+        assertEquals(historyBefore, historyCount());
 
         mockMvc.perform(get("/api/admin/v1/deals/" + dealId).session(adminSession))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/deals/" + dealId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(40400));
-        assertEquals(0, historyCount());
+        assertEquals(historyBefore, historyCount());
 
         int pendingVersion = submit(operatorSession, dealId);
         mockMvc.perform(post("/api/admin/v1/deals/" + dealId + "/reject").session(adminSession).with(csrf())
@@ -434,6 +460,51 @@ class AdminApiIntegrationTest {
         mockMvc.perform(put("/api/admin/v1/price-history/1").session(adminSession).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content("{\"price\":\"1.00\"}"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void repeatedVerificationKeyDoesNotDuplicateHistory() throws Exception {
+        long productId = createProduct(operatorSession, code("IDEM"));
+        long dealId = createDeal(operatorSession, productId, "11.00", "EDITOR", "https://item.example.com/idem");
+        int before = historyCount();
+        String body = """
+                {"productId":%d,"dealId":%d,"price":"11.50","sourceType":"EDITOR","sourceName":"页面","note":"第一次","idempotencyKey":"idem-key-001"}
+                """.formatted(productId, dealId);
+        MvcResult first = mockMvc.perform(post("/api/admin/v1/price-history").session(operatorSession).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.price").value("11.50"))
+                .andReturn();
+        long historyId = idOf(first);
+        mockMvc.perform(post("/api/admin/v1/price-history").session(operatorSession).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(historyId));
+        assertEquals(before + 1, historyCount());
+
+        String later = """
+                {"productId":%d,"dealId":%d,"price":"12.00","sourceType":"EDITOR","sourceName":"页面","note":"第二次","idempotencyKey":"idem-key-002"}
+                """.formatted(productId, dealId);
+        mockMvc.perform(post("/api/admin/v1/price-history").session(operatorSession).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(later))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.price").value("12.00"));
+        assertEquals(before + 2, historyCount());
+        assertEquals("DRAFT", statusOf(dealId));
+    }
+
+    @Test
+    void editingDraftDoesNotWritePriceHistory() throws Exception {
+        long productId = createProduct(operatorSession, code("DRFT"));
+        long dealId = createDeal(operatorSession, productId, "8.00", "EDITOR", null);
+        int before = historyCount();
+        int version = number(mockMvc.perform(get("/api/admin/v1/deals/" + dealId).session(operatorSession)).andReturn(), "$.data.version");
+        mockMvc.perform(put("/api/admin/v1/deals/" + dealId).session(operatorSession).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(dealBody(productId, "8.50", "EDITOR", null, version)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("DRAFT"));
+        assertEquals(before, historyCount());
     }
 
     @Test

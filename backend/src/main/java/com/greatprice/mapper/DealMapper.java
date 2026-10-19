@@ -57,6 +57,10 @@ public interface DealMapper extends BaseMapper<Deal> {
 
     int markVerified(@Param("id") Long id, @Param("now") LocalDateTime now);
 
+    java.util.List<Long> selectExpiredIds(@Param("now") LocalDateTime now, @Param("limit") int limit);
+
+    int expireByIds(@Param("ids") java.util.List<Long> ids, @Param("now") LocalDateTime now);
+
     @Select("""
             SELECT COUNT(*) FROM deal
             WHERE status = 'PUBLISHED' AND (expires_at IS NULL OR expires_at > #{now})

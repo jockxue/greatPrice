@@ -12,5 +12,6 @@ public record PriceVerifyRequest(
         @NotBlank(message = "核验价格不能为空") @Size(max = 16, message = "不能超过 16 个字符") String price,
         @NotBlank(message = "核验来源不能为空") String sourceType,
         @NotBlank(message = "来源名称不能为空") @Size(max = 64, message = "不能超过 64 个字符") String sourceName,
-        @Size(max = 500, message = "不能超过 500 个字符") String note) {
+        @Size(max = 500, message = "不能超过 500 个字符") String note,
+        @Size(max = 64, message = "不能超过 64 个字符") String idempotencyKey) {
 }

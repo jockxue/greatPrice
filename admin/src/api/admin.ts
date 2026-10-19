@@ -11,6 +11,12 @@ import type {
   PriceHistory,
   Product,
   Profile,
+  TaobaoImportResult,
+  TaobaoJob,
+  TaobaoPromotion,
+  TaobaoSearchResult,
+  TaobaoStatus,
+  TaobaoTestResult,
 } from '@/api/types'
 
 export function ensureCsrf() {
@@ -139,4 +145,42 @@ export function disableUser(id: number) {
 
 export function enableUser(id: number) {
   return unwrap<AdminUser>(http.post(`/api/admin/v1/users/${id}/enable`))
+}
+
+const taobaoTimeout = { timeout: 40000 }
+
+export function taobaoStatus() {
+  return unwrap<TaobaoStatus>(http.get('/api/admin/v1/affiliate/taobao/status'))
+}
+
+export function taobaoTest() {
+  return unwrap<TaobaoTestResult>(http.post('/api/admin/v1/affiliate/taobao/tests', null, taobaoTimeout))
+}
+
+export function taobaoItems(params: Record<string, unknown>) {
+  return unwrap<TaobaoSearchResult>(http.get('/api/admin/v1/affiliate/taobao/items', { params, ...taobaoTimeout }))
+}
+
+export function taobaoDetail(itemId: string) {
+  return unwrap<TaobaoSearchResult>(http.get('/api/admin/v1/affiliate/taobao/items/detail', { params: { itemId }, ...taobaoTimeout }))
+}
+
+export function taobaoPromotion(itemId: string, dealId?: number | null) {
+  return unwrap<TaobaoPromotion>(http.post('/api/admin/v1/affiliate/taobao/promotion-links', { itemId, dealId: dealId ?? undefined }, taobaoTimeout))
+}
+
+export function taobaoImport(itemId: string, categoryId: number) {
+  return unwrap<TaobaoImportResult>(http.post('/api/admin/v1/affiliate/taobao/imports', { itemId, categoryId }, taobaoTimeout))
+}
+
+export function taobaoRefresh(itemId: string) {
+  return unwrap<TaobaoImportResult>(http.post('/api/admin/v1/affiliate/taobao/refreshes', { itemId }, taobaoTimeout))
+}
+
+export function taobaoJobs(params: Record<string, unknown>) {
+  return unwrap<PageResult<TaobaoJob>>(http.get('/api/admin/v1/affiliate/taobao/jobs', { params }))
+}
+
+export function taobaoRetry(id: number) {
+  return unwrap<TaobaoJob>(http.post(`/api/admin/v1/affiliate/taobao/jobs/${id}/retry`, null, taobaoTimeout))
 }

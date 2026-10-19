@@ -26,6 +26,9 @@ spring:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
   jackson:
     time-zone: Asia/Shanghai
+  task:
+    scheduling:
+      timezone: Asia/Shanghai
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
@@ -45,3 +48,20 @@ app:
     init-enabled: ${ADMIN_INIT_ENABLED:true}
     init-username: ${ADMIN_INIT_USERNAME:}
     init-password: ${ADMIN_INIT_PASSWORD:}
+  deal-expiry:
+    enabled: ${DEAL_EXPIRY_ENABLED:true}
+    interval-ms: ${DEAL_EXPIRY_INTERVAL_MS:60000}
+    batch-size: ${DEAL_EXPIRY_BATCH_SIZE:200}
+  # 淘宝联盟凭证只从环境变量或 backend/.env 读取，不写默认密钥。
+  taobao:
+    enabled: ${TAOBAO_ENABLED:false}
+    manual-sync-enabled: ${TAOBAO_MANUAL_SYNC_ENABLED:false}
+    app-key: ${TAOBAO_APP_KEY:}
+    app-secret: ${TAOBAO_APP_SECRET:}
+    adzone-id: ${TAOBAO_ADZONE_ID:}
+    site-id: ${TAOBAO_SITE_ID:}
+    session: ${TAOBAO_SESSION:}
+    gateway-url: ${TAOBAO_GATEWAY_URL:https://eco.taobao.com/router/rest}
+    connect-timeout-ms: ${TAOBAO_CONNECT_TIMEOUT_MS:3000}
+    read-timeout-ms: ${TAOBAO_READ_TIMEOUT_MS:8000}
+    max-retries: ${TAOBAO_MAX_RETRIES:2}

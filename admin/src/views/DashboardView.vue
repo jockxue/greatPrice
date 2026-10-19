@@ -12,6 +12,16 @@
         <div class="stat"><span>已下架</span><b>{{ data?.offlineCount ?? '-' }}</b></div>
         <div class="stat"><span>已过期</span><b>{{ data?.expiredCount ?? '-' }}</b></div>
       </div>
+      <div class="panel" style="margin-bottom: 16px">
+        <h3>自动过期任务</h3>
+        <el-empty v-if="!data?.lastExpiryRun" description="尚未执行" />
+        <el-descriptions v-else :column="4" border>
+          <el-descriptions-item label="最近执行">{{ data.lastExpiryRun.finishedAt }}</el-descriptions-item>
+          <el-descriptions-item label="结果">{{ data.lastExpiryRun.status === 'SUCCESS' ? '成功' : '失败' }}</el-descriptions-item>
+          <el-descriptions-item label="处理数量">{{ data.lastExpiryRun.processedCount }}</el-descriptions-item>
+          <el-descriptions-item label="失败批次">{{ data.lastExpiryRun.failedCount }}</el-descriptions-item>
+        </el-descriptions>
+      </div>
       <div class="panel">
         <h3>最近更新的好价</h3>
         <el-table :data="data?.recentDeals ?? []" v-loading="loading">

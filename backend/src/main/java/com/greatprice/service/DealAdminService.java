@@ -23,6 +23,7 @@ import com.greatprice.mapper.DealReviewMapper;
 import com.greatprice.mapper.ProductMapper;
 import com.greatprice.security.AdminActors;
 import com.greatprice.security.AdminUserDetails;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -107,6 +108,34 @@ public class DealAdminService {
         dealMapper.insert(deal);
         auditService.record(actor.getId(), actor.getUsername(), AuditService.DEAL_CREATE, "DEAL", deal.getId(),
                 "productId=" + deal.getProductId());
+        return toResponse(requireRow(deal.getId()));
+    }
+
+    /**
+     * 淘宝导入专用：只创建草稿，并在同一次插入里写入优惠标识。
+     * 不写价格历史，不设置发布时间，也不把状态改成已发布。
+     */
+    @Transactional
+    public AdminDealResponse createAffiliateDraft(DealWriteRequest request, String offerKey,
+                                                   String promotionSource, LocalDateTime promotionGeneratedAt) {
+        AdminUserDetails actor = adminActors.current();
+        Deal deal = new Deal();
+        fill(deal, request);
+        deal.setStatus(Deal.STATUS_DRAFT);
+        deal.setFeatured(Boolean.FALSE);
+        deal.setVersion(0);
+        deal.setVerifiedAt(null);
+        deal.setPublishedAt(null);
+        deal.setExternalOfferKey(offerKey);
+        deal.setPromotionSource(promotionSource);
+        deal.setPromotionGeneratedAt(promotionGeneratedAt);
+        try {
+            dealMapper.insert(deal);
+        } catch (DataIntegrityViolationException ex) {
+            throw new BizException(ErrorCode.CONFLICT, "该优惠已导入");
+        }
+        auditService.record(actor.getId(), actor.getUsername(), AuditService.DEAL_CREATE, "DEAL", deal.getId(),
+                "affiliate productId=" + deal.getProductId());
         return toResponse(requireRow(deal.getId()));
     }
 
@@ -370,7 +399,15 @@ public class DealAdminService {
                 row.getReviewerName(),
                 DbTimes.toOffset(row.getReviewedAt()),
                 row.getVersion() == null ? 0 : row.getVersion(),
-                demo);
+                demo,
+                isExpired(row));
+    }
+
+    private static boolean isExpired(AdminDealRow row) {
+        if (Deal.STATUS_EXPIRED.equals(row.getStatus())) {
+            return true;
+        }
+        return row.getExpiresAt() != null && !row.getExpiresAt().isAfter(DbTimes.now());
     }
 
     private DealReviewResponse toReview(DealReviewRow row) {

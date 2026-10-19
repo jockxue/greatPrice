@@ -1,6 +1,7 @@
 package com.greatprice.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.greatprice.common.api.ErrorCode;
 import com.greatprice.common.api.PageResult;
@@ -20,6 +21,7 @@ import com.greatprice.mapper.PriceHistoryMapper;
 import com.greatprice.mapper.ProductMapper;
 import com.greatprice.security.AdminActors;
 import com.greatprice.security.AdminUserDetails;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -57,6 +59,11 @@ public class PriceHistoryAdminService {
     @Transactional
     public PriceHistoryResponse verify(PriceVerifyRequest request) {
         AdminUserDetails actor = adminActors.current();
+        String idempotencyKey = normalizeKey(request.idempotencyKey());
+        PriceHistory replay = findReplay(actor.getId(), idempotencyKey);
+        if (replay != null) {
+            return toResponse(priceHistoryMapper.selectAdminById(replay.getId()));
+        }
         if (!DealSource.VERIFIABLE.contains(request.sourceType())) {
             throw new BizException(ErrorCode.BAD_REQUEST, "演示数据不能写入真实价格历史");
         }
@@ -93,13 +100,42 @@ public class PriceHistoryAdminService {
         history.setRecordedAt(recordedAt);
         history.setVerifiedBy(actor.getId());
         history.setNote(request.note() == null || request.note().isBlank() ? null : request.note().strip());
-        priceHistoryMapper.insert(history);
+        history.setIdempotencyKey(idempotencyKey);
+        try {
+            priceHistoryMapper.insert(history);
+        } catch (DataIntegrityViolationException ex) {
+            PriceHistory existing = findReplay(actor.getId(), idempotencyKey);
+            if (existing != null) {
+                return toResponse(priceHistoryMapper.selectAdminById(existing.getId()));
+            }
+            throw ex;
+        }
         if (deal != null && dealMapper.markVerified(deal.getId(), recordedAt) != 1) {
             throw new BizException(ErrorCode.BAD_REQUEST, "演示数据不能写入真实价格历史");
         }
         auditService.record(actor.getId(), actor.getUsername(), AuditService.PRICE_VERIFY, "PRICE_HISTORY", history.getId(),
                 "price=" + price.toPlainString());
         return toResponse(priceHistoryMapper.selectAdminById(history.getId()));
+    }
+
+    private PriceHistory findReplay(Long actorId, String idempotencyKey) {
+        if (idempotencyKey == null) {
+            return null;
+        }
+        return priceHistoryMapper.selectOne(Wrappers.<PriceHistory>lambdaQuery()
+                .eq(PriceHistory::getVerifiedBy, actorId)
+                .eq(PriceHistory::getIdempotencyKey, idempotencyKey));
+    }
+
+    private static String normalizeKey(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String key = raw.strip();
+        if (key.length() < 8 || !key.matches("^[A-Za-z0-9_-]+$")) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "幂等键格式不正确");
+        }
+        return key;
     }
 
     private PriceHistoryResponse toResponse(PriceHistoryRow row) {

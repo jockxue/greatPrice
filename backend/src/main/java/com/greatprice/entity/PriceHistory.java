@@ -21,6 +21,7 @@ public class PriceHistory {
     private LocalDateTime recordedAt;
     private Long verifiedBy;
     private String note;
+    private String idempotencyKey;
     private LocalDateTime createdAt;
 
     public Long getId() {
@@ -109,6 +110,14 @@ public class PriceHistory {
 
     public void setNote(String note) {
         this.note = note;
+    }
+
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
     }
 
     public LocalDateTime getCreatedAt() {

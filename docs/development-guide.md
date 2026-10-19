@@ -27,6 +27,8 @@ Node 20 及以上版本均可（当前在 Node 24.19 / npm 11.17 上验证）。
 mysql -uroot -p < backend/sql/init.sql                       # 建库
 mysql -uroot -p great_price < backend/sql/schema.sql          # 建表（CREATE TABLE IF NOT EXISTS）
 mysql -uroot -p great_price < backend/sql/V4__admin.sql       # 第四阶段：管理员、审核、审计字段（只执行一次）
+mysql -uroot -p great_price < backend/sql/V5__deal_expiry.sql # 第五阶段：过期任务（只执行一次）
+mysql -uroot -p great_price < backend/sql/V6__taobao_affiliate.sql # 第六阶段：淘宝联盟关联（只执行一次）
 mysql -uroot -p great_price < backend/sql/demo-data.sql       # 【仅开发环境】演示数据
 ```
 
@@ -106,6 +108,20 @@ ADMIN_INIT_PASSWORD=至少10位的密码
 ```
 
 已有账号后，这两个变量不会重置密码。生产环境用系统环境变量注入，会话 Cookie 会加 `Secure`。
+
+自动过期任务默认开启，每 60 秒检查一次，可用 `DEAL_EXPIRY_ENABLED`、`DEAL_EXPIRY_INTERVAL_MS`、`DEAL_EXPIRY_BATCH_SIZE` 调整。第五阶段迁移：
+
+```bash
+mysql -uroot -p great_price < backend/sql/V5__deal_expiry.sql
+```
+
+淘宝联盟接入需要第六阶段迁移（只加表和列，不改已有商品价格和状态）：
+
+```bash
+mysql -uroot -p great_price < backend/sql/V6__taobao_affiliate.sql
+```
+
+在 `backend/.env` 配置 `TAOBAO_*`（说明见 `.env.example`）。不要把 App Secret 或 session 交给前端。未配置时管理后台会显示“未配置”，不会用模拟商品冒充调用成功。
 
 ## 4. 切换环境
 

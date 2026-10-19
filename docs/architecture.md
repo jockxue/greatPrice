@@ -140,4 +140,4 @@ com.greatprice
 
 - **管理后台**：`admin/`（Vue 3 + TypeScript + Vite + Element Plus），调用 `/api/admin/v1/**`。登录使用 HttpOnly 会话 Cookie，不在浏览器保存令牌。
 - **推广联盟**：在后端新增 `integration/` 或 `client/` 包封装联盟 SDK/HTTP 调用，凭证通过环境变量注入。
-- **有效性检查**：优先使用 Spring `@Scheduled` 定时任务；本阶段不自动把到期好价改成 `EXPIRED`，公开接口仍按 `expires_at` 过滤。
+- **有效性检查**：公开接口始终按 `expires_at` 过滤。另有 Spring 定时任务把已到结束时间的 `PUBLISHED` 好价改为 `EXPIRED`，默认每分钟一批，时区 `Asia/Shanghai`。结束时间为空不过期。

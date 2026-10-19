@@ -27,6 +27,9 @@ public class Deal {
     private String sourceName;
     private String purchaseUrl;
     private String promotionUrl;
+    private String externalOfferKey;
+    private String promotionSource;
+    private LocalDateTime promotionGeneratedAt;
     private Boolean featured;
     private LocalDateTime startsAt;
     private LocalDateTime expiresAt;
@@ -120,6 +123,30 @@ public class Deal {
 
     public void setPromotionUrl(String promotionUrl) {
         this.promotionUrl = promotionUrl;
+    }
+
+    public String getExternalOfferKey() {
+        return externalOfferKey;
+    }
+
+    public void setExternalOfferKey(String externalOfferKey) {
+        this.externalOfferKey = externalOfferKey;
+    }
+
+    public String getPromotionSource() {
+        return promotionSource;
+    }
+
+    public void setPromotionSource(String promotionSource) {
+        this.promotionSource = promotionSource;
+    }
+
+    public LocalDateTime getPromotionGeneratedAt() {
+        return promotionGeneratedAt;
+    }
+
+    public void setPromotionGeneratedAt(LocalDateTime promotionGeneratedAt) {
+        this.promotionGeneratedAt = promotionGeneratedAt;
     }
 
     public Boolean getFeatured() {

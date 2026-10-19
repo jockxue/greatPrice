@@ -8,5 +8,6 @@ public record DashboardResponse(
         long pendingCount,
         long offlineCount,
         long expiredCount,
-        List<AdminDealResponse> recentDeals) {
+        List<AdminDealResponse> recentDeals,
+        JobRunSummary lastExpiryRun) {
 }

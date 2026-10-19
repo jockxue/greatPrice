@@ -73,6 +73,7 @@ export interface Deal {
   reviewedAt: string | null
   version: number
   demo: boolean
+  expired: boolean
 }
 
 export interface DealReview {
@@ -92,6 +93,17 @@ export interface Dashboard {
   offlineCount: number
   expiredCount: number
   recentDeals: Deal[]
+  lastExpiryRun: JobRun | null
+}
+
+export interface JobRun {
+  jobName: string
+  status: string
+  processedCount: number
+  failedCount: number
+  message: string | null
+  startedAt: string
+  finishedAt: string
 }
 
 export interface PriceHistory {
@@ -144,4 +156,118 @@ export interface DealWrite {
   startsAt: string | null
   expiresAt: string | null
   version?: number
+}
+
+export interface TaobaoStatus {
+  enabled: boolean
+  manualSyncEnabled: boolean
+  appKeyConfigured: boolean
+  appKeyMasked: string | null
+  appSecretConfigured: boolean
+  siteIdConfigured: boolean
+  adzoneIdConfigured: boolean
+  sessionConfigured: boolean
+  gatewayHost: string | null
+  searchConfigured: boolean
+  detailConfigured: boolean
+  promotionConfigured: boolean
+  lastTestStatus: string | null
+  lastTestMessage: string | null
+  lastTestErrorCode: string | null
+  lastTestAt: string | null
+}
+
+export interface TaobaoItem {
+  platform: string
+  apiMethod: string
+  itemId: string | null
+  title: string | null
+  imageUrl: string | null
+  shopTitle: string | null
+  reservePrice: string | null
+  reservePriceStatus: string
+  finalPrice: string | null
+  finalPriceStatus: string
+  salePrice: string | null
+  salePriceStatus: string
+  couponId: string | null
+  couponInfo: string | null
+  couponStart: string | null
+  couponEnd: string | null
+  itemUrl: string | null
+  platformClickUrl: string | null
+  promotionLinkGenerated: boolean
+  categoryName: string | null
+  suggestedCategoryId: number | null
+  importedProductId: number | null
+  importedDealId: number | null
+  importedDealStatus: string | null
+  volume: string | null
+  userType: string | null
+  catName: string | null
+  catLeafName: string | null
+  playInfo: string | null
+  presaleText: string | null
+  kuadian: string | null
+}
+
+export interface TaobaoSearchResult {
+  apiMethod: string
+  requestId: string | null
+  total: number
+  items: TaobaoItem[]
+}
+
+export interface TaobaoPromotion {
+  apiMethod: string
+  requestId: string | null
+  itemId: string
+  promotionUrl: string
+  linkField: string
+  couponInfo: string | null
+  couponStart: string | null
+  couponEnd: string | null
+  persisted: boolean
+  dealId: number | null
+  miniProgramCompatible: boolean
+  clientNote: string
+}
+
+export interface TaobaoImportResult {
+  productOutcome: string
+  productId: number
+  productCode: string | null
+  dealOutcome: string
+  dealId: number | null
+  dealStatus: string | null
+  message: string
+}
+
+export interface TaobaoProbe {
+  state: string
+  apiMethod: string
+  errorCode: string | null
+  message: string | null
+  requestId: string | null
+  retryable: boolean
+}
+
+export interface TaobaoTestResult {
+  search: TaobaoProbe
+  detail: TaobaoProbe
+  promotion: TaobaoProbe
+}
+
+export interface TaobaoJob {
+  id: number
+  jobName: string
+  status: string
+  requestedCount: number
+  processedCount: number
+  failedCount: number
+  errorCode: string | null
+  retryable: boolean
+  message: string | null
+  startedAt: string | null
+  finishedAt: string | null
 }

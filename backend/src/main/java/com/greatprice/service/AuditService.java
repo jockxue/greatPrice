@@ -24,9 +24,13 @@ public class AuditService {
     public static final String DEAL_REVISE = "DEAL_REVISE";
     public static final String DEAL_REOPEN = "DEAL_REOPEN";
     public static final String PRICE_VERIFY = "PRICE_VERIFY";
+    public static final String DEAL_EXPIRE = "DEAL_EXPIRE";
     public static final String USER_CREATE = "USER_CREATE";
     public static final String USER_DISABLE = "USER_DISABLE";
     public static final String USER_ENABLE = "USER_ENABLE";
+    public static final String TAOBAO_IMPORT = "TAOBAO_IMPORT";
+    public static final String TAOBAO_REFRESH = "TAOBAO_REFRESH";
+    public static final String TAOBAO_PROMOTION = "TAOBAO_PROMOTION";
 
     private final AuditLogMapper auditLogMapper;
 

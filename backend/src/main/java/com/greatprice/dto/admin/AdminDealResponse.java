@@ -42,5 +42,6 @@ public record AdminDealResponse(
         String reviewerName,
         OffsetDateTime reviewedAt,
         int version,
-        boolean demo) {
+        boolean demo,
+        boolean expired) {
 }

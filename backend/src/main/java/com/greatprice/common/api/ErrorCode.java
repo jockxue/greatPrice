@@ -17,7 +17,9 @@ public enum ErrorCode {
     METHOD_NOT_ALLOWED(40500, "请求方法不支持", HttpStatus.METHOD_NOT_ALLOWED),
     CONFLICT(40900, "数据已被他人更新，请刷新后重试", HttpStatus.CONFLICT),
 
-    INTERNAL_ERROR(50000, "系统繁忙，请稍后重试", HttpStatus.INTERNAL_SERVER_ERROR);
+    INTERNAL_ERROR(50000, "系统繁忙，请稍后重试", HttpStatus.INTERNAL_SERVER_ERROR),
+    UPSTREAM_ERROR(50200, "上游服务调用失败", HttpStatus.BAD_GATEWAY),
+    UPSTREAM_UNAVAILABLE(50300, "上游服务暂不可用，请稍后重试", HttpStatus.SERVICE_UNAVAILABLE);
 
     private final int code;
     private final String message;

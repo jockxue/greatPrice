@@ -198,4 +198,25 @@
             version = version + 1
         WHERE id = #{id} AND source_type &lt;&gt; 'DEMO'
     </update>
+
+    <select id="selectExpiredIds" resultType="long">
+        SELECT id
+        FROM deal
+        WHERE status = 'PUBLISHED'
+          AND expires_at IS NOT NULL
+          AND expires_at &lt;= #{now}
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
+
+    <update id="expireByIds">
+        UPDATE deal
+        SET status = 'EXPIRED',
+            version = version + 1
+        WHERE status = 'PUBLISHED'
+          AND expires_at IS NOT NULL
+          AND expires_at &lt;= #{now}
+          AND id IN
+          <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </update>
 </mapper>

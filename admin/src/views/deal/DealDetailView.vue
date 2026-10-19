@@ -11,6 +11,7 @@
         <el-alert v-if="data.offlineReason" :title="`下架原因：${data.offlineReason}`" type="info" show-icon :closable="false" style="margin-top: 12px" />
         <el-descriptions :column="2" border style="margin-top: 12px">
           <el-descriptions-item label="状态"><StatusTag :status="data.status" /></el-descriptions-item>
+          <el-descriptions-item label="是否到期">{{ data.expired ? '是' : '否' }}</el-descriptions-item>
           <el-descriptions-item label="演示">{{ data.demo ? '是' : '否' }}</el-descriptions-item>
           <el-descriptions-item label="商品">
             <el-button link type="primary" @click="router.push(`/products/${data.productId}`)">{{ data.title }}（{{ data.productCode }}）</el-button>

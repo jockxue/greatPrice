@@ -73,6 +73,7 @@ const visible = ref(false)
 const submitting = ref(false)
 const formRef = ref<FormInstance>()
 const form = reactive({ productId: '', dealId: '', price: '', sourceType: 'EDITOR', sourceName: '', note: '' })
+const idempotencyKey = ref('')
 const rules: FormRules = {
   productId: [{ required: true, message: '请填写商品 ID', trigger: 'blur' }],
   price: [{
@@ -124,6 +125,7 @@ function changePage(next: number) {
 function openVerify() {
   form.productId = productId.value
   form.dealId = dealId.value
+  idempotencyKey.value = crypto.randomUUID()
   visible.value = true
 }
 
@@ -139,6 +141,7 @@ async function submitVerify() {
       sourceType: form.sourceType,
       sourceName: form.sourceName.trim(),
       note: form.note.trim() || null,
+      idempotencyKey: idempotencyKey.value,
     })
     ElMessage.success('已记录核验')
     visible.value = false

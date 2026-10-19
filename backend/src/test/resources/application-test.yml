@@ -12,8 +12,15 @@ spring:
       schema-locations:
         - file:sql/schema.sql
         - file:sql/V4__admin.sql
+        - file:sql/V5__deal_expiry.sql
+        - file:sql/V6__taobao_affiliate.sql
       data-locations: classpath:db/test-data.sql
 
 app:
   admin:
     init-enabled: false
+  deal-expiry:
+    enabled: false
+  taobao:
+    enabled: false
+    manual-sync-enabled: false

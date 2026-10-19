@@ -18,13 +18,16 @@ public class DashboardService {
     private final ProductMapper productMapper;
     private final DealMapper dealMapper;
     private final DealAdminService dealAdminService;
+    private final DealExpiryService dealExpiryService;
     private final AdminActors adminActors;
 
     public DashboardService(ProductMapper productMapper, DealMapper dealMapper,
-                            DealAdminService dealAdminService, AdminActors adminActors) {
+                            DealAdminService dealAdminService, DealExpiryService dealExpiryService,
+                            AdminActors adminActors) {
         this.productMapper = productMapper;
         this.dealMapper = dealMapper;
         this.dealAdminService = dealAdminService;
+        this.dealExpiryService = dealExpiryService;
         this.adminActors = adminActors;
     }
 
@@ -40,6 +43,7 @@ public class DashboardService {
                 pendingCount,
                 offlineCount,
                 dealMapper.countExpired(now),
-                dealAdminService.recent());
+                dealAdminService.recent(),
+                dealExpiryService.latest());
     }
 }
